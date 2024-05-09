@@ -39,6 +39,27 @@ namespace WindowsFormsApp1
             this.KeyUp += new KeyEventHandler(inputCheck);
             Init();
         }
+        private void inputCheck(object sender, KeyEventArgs e)
+        {
+            map[platformY, platformX] = 0;
+            map[platformY, platformX + 1] = 0;
+            map[platformY, platformX + 2] = 0;
+            switch (e.KeyCode)
+            {
+                case Keys.Right:
+                    if (platformX + 1 < mapWidth - 1)
+                        platformX++;
+                    break;
+                case Keys.Left:
+                    if (platformX > 0)
+                        platformX--;
+                    break;
+            }
+            map[platformY, platformX] = 9;
+            map[platformY, platformX + 1] = 99;
+            map[platformY, platformX + 2] = 999;
+        }
+
         public void AddLine()
         {
             for (int i = mapHeight - 2; i > 0; i--)
@@ -56,10 +77,29 @@ namespace WindowsFormsApp1
                 map[0, j + 1] = currPlatform + currPlatform * 10;
             }
         }
-        public void DrawArea(Graphics g)
+
+        private void update(object sender, EventArgs e)
         {
-            g.DrawRectangle(Pens.Black, new Rectangle(0, 0, mapWidth * 20, mapHeight * 20));
+            if (ballY + dirY > mapHeight - 1)
+            {
+                Init();
+            }
+
+
+            map[ballY, ballX] = 0;
+            if (!IsCollide())
+                ballX += dirX;
+            if (!IsCollide())
+                ballY += dirY;
+            map[ballY, ballX] = 8;
+
+            map[platformY, platformX] = 9;
+            map[platformY, platformX + 1] = 99;
+            map[platformY, platformX + 2] = 999;
+
+            Invalidate();
         }
+
         public void GeneratePlatforms()
         {
             Random r = new Random();
@@ -73,12 +113,91 @@ namespace WindowsFormsApp1
                 }
             }
         }
+
+        public bool IsCollide()
+        {
+            bool isColliding = false;
+            if (ballX + dirX > mapWidth - 1 || ballX + dirX < 0)
+            {
+                dirX *= -1;
+                isColliding = true;
+            }
+            if (ballY + dirY < 0)
+            {
+                dirY *= -1;
+                isColliding = true;
+            }
+
+            if (map[ballY + dirY, ballX] != 0)
+            {
+                bool addScore = false;
+                isColliding = true;
+
+                if (map[ballY + dirY, ballX] > 10 && map[ballY + dirY, ballX] < 99)
+                {
+                    map[ballY + dirY, ballX] = 0;
+                    map[ballY + dirY, ballX - 1] = 0;
+                    addScore = true;
+                }
+                else if (map[ballY + dirY, ballX] < 9)
+                {
+                    map[ballY + dirY, ballX] = 0;
+                    map[ballY + dirY, ballX + 1] = 0;
+                    addScore = true;
+                }
+                if (addScore)
+                {
+                    score += 50;
+                    if (score % 200 == 0 && score > 0)
+                    {
+                        AddLine();
+                    }
+                }
+                dirY *= -1;
+            }
+            if (map[ballY, ballX + dirX] != 0)
+            {
+                bool addScore = false;
+                isColliding = true;
+
+                if (map[ballY, ballX + dirX] > 10 && map[ballY + dirY, ballX] < 99)
+                {
+                    map[ballY, ballX + dirX] = 0;
+                    map[ballY, ballX + dirX - 1] = 0;
+                    addScore = true;
+                }
+                else if (map[ballY, ballX + dirX] < 9)
+                {
+                    map[ballY, ballX + dirX] = 0;
+                    map[ballY, ballX + dirX + 1] = 0;
+                    addScore = true;
+                }
+                if (addScore)
+                {
+                    score += 50;
+                    if (score % 200 == 0 && score > 0)
+                    {
+                        AddLine();
+                    }
+                }
+                dirX *= -1;
+            }
+            scoreLabel.Text = "Score: " + score;
+
+            return isColliding;
+        }
+
+        public void DrawArea(Graphics g)
+        {
+            g.DrawRectangle(Pens.Black, new Rectangle(0, 0, mapWidth * 20, mapHeight * 20));
+        }
+
         public void Init()
         {
             this.Width = (mapWidth + 5) * 20;
             this.Height = (mapHeight + 2) * 20;
 
-            arcanoidSet = new Bitmap("C:\\Users\\rr033\\Desktop\\arcanoid.png");// вот здесь нужно поменть расположение и поставить что то другое и внести в проект чтобы не было зависимости от устройства
+            arcanoidSet = new Bitmap("C:\\Users\\r033\\Desktop\\arcanoid.png"); // нужно перенести это в проект 
             timer1.Interval = 40;
 
             score = 0;
@@ -112,43 +231,54 @@ namespace WindowsFormsApp1
 
             timer1.Start();
         }
-        private void update(object sender, EventArgs e)
+
+        public void DrawMap(Graphics g)
         {
-            if (ballY + dirY > mapHeight - 1)
+            for (int i = 0; i < mapHeight; i++)
             {
-                Init();
+                for (int j = 0; j < mapWidth; j++)
+                {
+                    if (map[i, j] == 9)
+                    {
+                        g.DrawImage(arcanoidSet, new Rectangle(new Point(j * 20, i * 20), new Size(60, 20)), 398, 17, 150, 50, GraphicsUnit.Pixel);
+                    }
+                    if (map[i, j] == 8)
+                    {
+                        g.DrawImage(arcanoidSet, new Rectangle(new Point(j * 20, i * 20), new Size(20, 20)), 806, 548, 73, 73, GraphicsUnit.Pixel);
+                    }
+                    if (map[i, j] == 1)
+                    {
+                        g.DrawImage(arcanoidSet, new Rectangle(new Point(j * 20, i * 20), new Size(40, 20)), 20, 16, 170, 59, GraphicsUnit.Pixel);
+                    }
+                    if (map[i, j] == 2)
+                    {
+                        g.DrawImage(arcanoidSet, new Rectangle(new Point(j * 20, i * 20), new Size(40, 20)), 20, 16 + 77 * (map[i, j] - 1), 170, 59, GraphicsUnit.Pixel);
+                    }
+                    if (map[i, j] == 3)
+                    {
+                        g.DrawImage(arcanoidSet, new Rectangle(new Point(j * 20, i * 20), new Size(40, 20)), 20, 16 + 77 * (map[i, j] - 1), 170, 59, GraphicsUnit.Pixel);
+                    }
+                    if (map[i, j] == 4)
+                    {
+                        g.DrawImage(arcanoidSet, new Rectangle(new Point(j * 20, i * 20), new Size(40, 20)), 20, 16 + 77 * (map[i, j] - 1), 170, 59, GraphicsUnit.Pixel);
+                    }
+                    if (map[i, j] == 5)
+                    {
+                        g.DrawImage(arcanoidSet, new Rectangle(new Point(j * 20, i * 20), new Size(40, 20)), 20, 16 + 77 * (map[i, j] - 1), 170, 59, GraphicsUnit.Pixel);
+                    }
+                }
             }
-
-
-            map[ballY, ballX] = 0;
-           
-            map[ballY, ballX] = 8;
-
-            map[platformY, platformX] = 9;
-            map[platformY, platformX + 1] = 99;
-            map[platformY, platformX + 2] = 999;
-
-            Invalidate();
         }
-        private void inputCheck(object sender, KeyEventArgs e)
+
+        private void OnPaint(object sender, PaintEventArgs e)
         {
-            map[platformY, platformX] = 0;
-            map[platformY, platformX + 1] = 0;
-            map[platformY, platformX + 2] = 0;
-            switch (e.KeyCode)
-            {
-                case Keys.Right:
-                    if (platformX + 1 < mapWidth - 1)
-                        platformX++;
-                    break;
-                case Keys.Left:
-                    if (platformX > 0)
-                        platformX--;
-                    break;
-            }
-            map[platformY, platformX] = 9;
-            map[platformY, platformX + 1] = 99;
-            map[platformY, platformX + 2] = 999;
+            DrawArea(e.Graphics);
+            DrawMap(e.Graphics);
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }
